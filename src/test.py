@@ -95,7 +95,7 @@ if __name__ == '__main__':
     model.print_network()
     print('\n\n' + '-*=' * 30 + '\n\n')
     assert os.path.isfile(configs.pretrained_path), "No file at {}".format(configs.pretrained_path)
-    model.load_state_dict(torch.load(configs.pretrained_path))
+    model.load_state_dict(torch.load(configs.pretrained_path, map_location='cuda:0'))
 
     configs.device = torch.device('cpu' if configs.no_cuda else 'cuda:{}'.format(configs.gpu_idx))
     model = model.to(device=configs.device)
@@ -139,7 +139,16 @@ if __name__ == '__main__':
             out_img = merge_rgb_to_bev(img_rgb, img_bev, output_width=608)
 
             print('\tDone testing the {}th sample, time: {:.1f}ms, speed {:.2f}FPS'.format(batch_idx, (t2 - t1) * 1000,
-                                                                                           1 / (t2 - t1)))
+            
+                                                                                   1 / (t2 - t1)))
+            # Write time and fps into txt file
+            # f = open("time.txt", "a")
+            # f.write('\n{:.1f}'.format((t2 - t1) * 1000))
+            # f.close()  
+
+            # g = open("fps.txt", "a")
+            # g.write('\n{:.2f}'.format(1 / (t2 - t1)))
+            # g.close()   
 
             if configs.save_test_output:
                 if configs.output_format == 'image':
