@@ -9,3 +9,8 @@ scikit-learn
 mayavi
 tqdm
 shapely
+pillow
+scipy
+matplotlib
+wxpython
+PyQt5
