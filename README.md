@@ -99,7 +99,7 @@ python kitti_dataloader.py --show-train-data --cutout_prob 1. --cutout_nholes 1 
 
 
 ```shell
-$ python kitti_object.py --help
+$ python3 kitti_object.py --help
 usage: kitti_object.py [-h] [-d N] [-i N] [-p] [-s] [-l N] [-e N] [-r N]
                        [--gen_depth] [--vis] [--depth] [--img_fov]
                        [--const_box] [--save_depth] [--pc_label]
@@ -135,6 +135,10 @@ optional arguments:
                         show lidar topview
   --split               use training split or testing split (default: training)
 
+```
+Change to the viz directory:
+```
+cd viz
 ```
 Replace `<PATH>` with your path to the dataset dir and display LiDAR and image with specific index: 
 ```
