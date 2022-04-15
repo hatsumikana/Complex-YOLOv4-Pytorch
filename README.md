@@ -3,43 +3,31 @@
 [![python-image]][python-url]
 [![pytorch-image]][pytorch-url]
 
-The PyTorch Implementation based on YOLOv4 of the paper: [Complex-YOLO: Real-time 3D Object Detection on Point Clouds](https://arxiv.org/pdf/1803.06199.pdf)
-
----
-
-## Features
-- [x] Realtime 3D object detection based on YOLOv4
-- [x] Support [distributed data parallel training](https://github.com/pytorch/examples/tree/master/distributed/ddp)
-- [x] Tensorboard
-- [x] Mosaic/Cutout augmentation for training
-- [x] Use [GIoU](https://arxiv.org/pdf/1902.09630v2.pdf) loss of rotated boxes for optimization.
-
-- **Update 2020.08.26**: [Super Fast and Accurate 3D Object Detection based on 3D LiDAR Point Clouds](https://github.com/maudzung/Super-Fast-Accurate-3D-Object-Detection)
-    - Faster training, faster inference
-    
-    - An Anchor-free approach
-    
-    - No need for Non-Max-Suppression
-    
-    - Demonstration (on a GTX 1080Ti)
+This repository combines the PyTorch Implementation based on YOLOv4 of the paper: [Complex-YOLO: Real-time 3D Object Detection on Point Clouds](https://arxiv.org/pdf/1803.06199.pdf) by [maudzung](https://github.com/maudzung/Complex-YOLOv4-Pytorch) and the [visualization of the Images and 3D point clouds with ground truth from the kitti dataset](https://github.com/kuixu/kitti_object_vis)
 
 [![demo](http://img.youtube.com/vi/FI8mJIXkgX4/0.jpg)](http://www.youtube.com/watch?v=FI8mJIXkgX4)
 
+## 1. Getting Started
+### 1.1. Setup environment
 
-**[Youtube link](https://youtu.be/FI8mJIXkgX4)**
-
-## 2. Getting Started
-### 2.1. Requirement
-
-```shell script
-pip install -U -r requirements.txt
+- Start from a new conda environment:
+```
+conda create -n complexYOLOv4 python=3.7 # vtk does not support python 3.8
+conda activate complexYOLOv4
+```
+- Install the requirements
+```
+pip3 install -U -r requirements.txt
+```
+- install mayavi from conda-forge, this installs vtk and pyqt5 automatically
+```
+conda install mayavi -c conda-forge
 ```
 
 For [`mayavi`](https://docs.enthought.com/mayavi/mayavi/installation.html) and [`shapely`](https://shapely.readthedocs.io/en/latest/project.html#installing-shapely) 
-libraries, please refer to the installation instructions from their official websites.
+libraries, you may have to refer to the installation instructions from their official websites.
 
-
-### 2.2. Data Preparation
+### 1.2. Data Preparation
 Download the 3D KITTI detection dataset from [here](http://www.cvlibs.net/datasets/kitti/eval_object.php?obj_benchmark=3d).
 
 The downloaded data includes:
@@ -57,7 +45,7 @@ For 3D point cloud preprocessing, please refer to the previous works:
 - [Complex-YOLOv3](https://github.com/ghimiredhikura/Complex-YOLOv3)
 
 
-### 2.3. Complex-YOLO architecture
+### 1.3. Complex-YOLO architecture
 
 ![architecture](./docs/complex_yolo_architecture.PNG)
 
@@ -69,9 +57,9 @@ Please refer to several implementations of YOLOv4 using PyTorch DL framework:
 - [WongKinYiu/PyTorch_YOLOv4](https://github.com/WongKinYiu/PyTorch_YOLOv4)
 - [VCasecnikovs/Yet-Another-YOLOv4-Pytorch](https://github.com/VCasecnikovs/Yet-Another-YOLOv4-Pytorch)
 
-### 2.4. How to run
+## 2. How to run
 
-#### 2.4.1. Visualize the dataset (both BEV images from LiDAR and camera images)
+### 2.1. Visualize dataset (BEV images from LiDAR and camera images)
 
 ```shell script
 cd src/data_process
@@ -102,7 +90,80 @@ python kitti_dataloader.py --show-train-data --mosaic --random-padding --output-
 python kitti_dataloader.py --show-train-data --cutout_prob 1. --cutout_nholes 1 --cutout_fill_value 1. --cutout_ratio 0.3 --output-width 608
 ```
 
-#### 2.4.2. Inference
+### 2.2. Visualize dataset (3D point clouds from LiDAR and camera images)
+
+1. 3D boxes on LiDar point cloud in volumetric mode
+2. 2D and 3D boxes on Camera image
+3. 2D boxes on LiDar Birdview
+4. LiDar data on Camera image
+
+
+```shell
+$ python kitti_object.py --help
+usage: kitti_object.py [-h] [-d N] [-i N] [-p] [-s] [-l N] [-e N] [-r N]
+                       [--gen_depth] [--vis] [--depth] [--img_fov]
+                       [--const_box] [--save_depth] [--pc_label]
+                       [--show_lidar_on_image] [--show_lidar_with_depth]
+                       [--show_image_with_boxes]
+                       [--show_lidar_topview_with_boxes]
+
+KIITI Object Visualization
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d N, --dir N         input (default: data/object)
+  -i N, --ind N         input (default: data/object)
+  -p, --pred            show predict results
+  -s, --stat            stat the w/h/l of point cloud in gt bbox
+  -l N, --lidar N       velodyne dir (default: velodyne)
+  -e N, --depthdir N    depth dir (default: depth)
+  -r N, --preddir N     predicted boxes (default: pred)
+  --gen_depth           generate depth
+  --vis                 show images
+  --depth               load depth
+  --img_fov             front view mapping
+  --const_box           constraint box
+  --save_depth          save depth into file
+  --pc_label            5-verctor lidar, pc with label
+  --show_lidar_on_image
+                        project lidar on image
+  --show_lidar_with_depth
+                        --show_lidar, depth is supported
+  --show_image_with_boxes
+                        show lidar
+  --show_lidar_topview_with_boxes
+                        show lidar topview
+  --split               use training split or testing split (default: training)
+
+```
+Replace `<PATH>` with your path to the dataset dir and display LiDAR and image with specific index: 
+```
+python3 kitti_object.py -d <PATH>/dataset/kitti --show_lidar_with_depth --const_box --vis --show_image_with_boxes --ind 1
+```
+
+#### 2.2.1. Demo of visualization
+
+#### 2D, 3D boxes and LiDar data on Camera image
+<img src="./imgs/rgb.png" alt="2D, 3D boxes LiDar data on Camera image" align="center" />
+<img src="./imgs/lidar-label.png" alt="boxes with class label" align="center" />
+Credit: @yuanzhenxun
+
+#### LiDar birdview and point cloud (3D)
+<img src="./imgs/lidar.png" alt="LiDar point cloud and birdview" align="center" />
+
+#### 2.2.2. Show Predicted Results
+
+Firstly, map KITTI official formated results into data directory
+```
+./map_pred.sh /path/to/results
+```
+
+```python
+python kitti_object.py -p --vis
+```
+<img src="./imgs/pred.png" alt="Show Predicted Results" align="center" />
+
+### 2.3. Inference
 
 Download the trained model from [**_here_**](https://drive.google.com/drive/folders/1RHD9PBvk-9SjbKwoi_Q1kl9-UGFo2Pth?usp=sharing), 
 then put it to `${ROOT}/checkpoints/` and execute:
@@ -111,22 +172,22 @@ then put it to `${ROOT}/checkpoints/` and execute:
 python test.py --gpu_idx 0 --pretrained_path ../checkpoints/complex_yolov4/complex_yolov4_mse_loss.pth --cfgfile ./config/cfg/complex_yolov4.cfg --show_image
 ```
 
-#### 2.4.3. Evaluation
+### 2.4. Evaluation
 
 ```shell script
 python evaluate.py --gpu_idx 0 --pretrained_path <PATH> --cfgfile <CFG> --img_size <SIZE> --conf-thresh <THRESH> --nms-thresh <THRESH> --iou-thresh <THRESH>
 ```
 (The `conf-thresh`, `nms-thresh`, and `iou-thresh` params can be adjusted. By default, these params have been set to _**0.5**_)
 
-#### 2.4.4. Training
+### 2.5. Training
 
-##### 2.4.4.1. Single machine, single gpu
+#### 2.5.1. Single machine, single gpu
 
 ```shell script
 python train.py --gpu_idx 0 --batch_size <N> --num_workers <N>...
 ```
 
-##### 2.4.4.2. Multi-processing Distributed Data Parallel Training
+#### 2.5.2. Multi-processing Distributed Data Parallel Training
 We should always use the `nccl` backend for multi-processing distributed training since it currently provides the best 
 distributed training performance.
 
@@ -155,7 +216,7 @@ To reproduce the results, you can run the bash shell script
 ./train.sh
 ```
 
-#### Tensorboard
+### Tensorboard
 
 - To track the training progress, go to the `logs/` folder and 
 
@@ -167,7 +228,7 @@ tensorboard --logdir=./
 - Then go to [http://localhost:6006/](http://localhost:6006/):
 
 
-### 2.5. List of usage for Bag of Freebies (BoF) & Bag of Specials (BoS) in this implementation
+### 2.6. List of usage for Bag of Freebies (BoF) & Bag of Specials (BoS) in this implementation
 
 
 |   |Backbone   | Detector   |
@@ -200,7 +261,9 @@ Thank you!
   journal = {arXiv},
 }
 ```
+## Acknowlegement
 
+Code is mainly from [f-pointnet](https://github.com/charlesq34/frustum-pointnets) and [MV3D](https://github.com/bostondiditeam/MV3D)
 
 ## Folder structure
 
