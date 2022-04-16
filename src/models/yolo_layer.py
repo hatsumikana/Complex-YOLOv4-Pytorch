@@ -76,7 +76,7 @@ class YoloLayer(nn.Module):
         """
         nB, nA, nG, _, nC = pred_cls.size()
         n_target_boxes = target.size(0)
-
+        # print('targetttt: ', target)
         # Create output tensors on "device"
         obj_mask = torch.full(size=(nB, nA, nG, nG), fill_value=0, device=self.device, dtype=torch.uint8)
         noobj_mask = torch.full(size=(nB, nA, nG, nG), fill_value=1, device=self.device, dtype=torch.uint8)
@@ -91,11 +91,12 @@ class YoloLayer(nn.Module):
         tcls = torch.full(size=(nB, nA, nG, nG, nC), fill_value=0, device=self.device, dtype=torch.float)
         tconf = obj_mask.float()
         giou_loss = torch.tensor([0.], device=self.device, dtype=torch.float)
-
+        # print('labels: ', target)
         if n_target_boxes > 0:  # Make sure that there is at least 1 box
             b, target_labels = target[:, :2].long().t()
+            
             target_boxes = torch.cat((target[:, 2:6] * nG, target[:, 6:8]), dim=-1)  # scale up x, y, w, h
-
+            # print('target_boxes: ', target_boxes)
             gxy = target_boxes[:, :2]
             gwh = target_boxes[:, 2:4]
             gimre = target_boxes[:, 4:6]
@@ -196,12 +197,22 @@ class YoloLayer(nn.Module):
             iou_scores, giou_loss, class_mask, obj_mask, noobj_mask, tx, ty, tw, th, tim, tre, tcls, tconf = self.build_targets(
                 pred_boxes=pred_boxes, pred_cls=pred_cls, target=targets, anchors=self.scaled_anchors)
 
-            loss_x = F.mse_loss(pred_x[obj_mask], tx[obj_mask], reduction=self.reduction)
-            loss_y = F.mse_loss(pred_y[obj_mask], ty[obj_mask], reduction=self.reduction)
-            loss_w = F.mse_loss(pred_w[obj_mask], tw[obj_mask], reduction=self.reduction)
-            loss_h = F.mse_loss(pred_h[obj_mask], th[obj_mask], reduction=self.reduction)
-            loss_im = F.mse_loss(pred_im[obj_mask], tim[obj_mask], reduction=self.reduction)
-            loss_re = F.mse_loss(pred_re[obj_mask], tre[obj_mask], reduction=self.reduction)
+            target_labels = targets[:, 1]
+            print(target_labels)
+
+            loss_x = self.mseloss(target_labels, pred_x[obj_mask], tx[obj_mask],device=self.device)
+            loss_y = self.mseloss(target_labels,pred_y[obj_mask], ty[obj_mask],device=self.device)
+            loss_w = self.mseloss(target_labels,pred_w[obj_mask], tw[obj_mask],device=self.device)
+            loss_h = self.mseloss(target_labels,pred_h[obj_mask], th[obj_mask],device=self.device)
+            loss_im = self.mseloss(target_labels,pred_im[obj_mask], tim[obj_mask],device=self.device)
+            loss_re = self.mseloss(target_labels,pred_re[obj_mask], tre[obj_mask],device=self.device)
+
+            # loss_x = F.mse_loss(pred_x[obj_mask], tx[obj_mask], reduction=self.reduction)
+            # loss_y = F.mse_loss(pred_y[obj_mask], ty[obj_mask], reduction=self.reduction)
+            # loss_w = F.mse_loss(pred_w[obj_mask], tw[obj_mask], reduction=self.reduction)
+            # loss_h = F.mse_loss(pred_h[obj_mask], th[obj_mask], reduction=self.reduction)
+            # loss_im = F.mse_loss(pred_im[obj_mask], tim[obj_mask], reduction=self.reduction)
+            # loss_re = F.mse_loss(pred_re[obj_mask], tre[obj_mask], reduction=self.reduction)
             loss_im_re = (1. - torch.sqrt(pred_im[obj_mask] ** 2 + pred_re[obj_mask] ** 2)) ** 2  # as tim^2 + tre^2 = 1
             loss_im_re_red = loss_im_re.sum() if self.reduction == 'sum' else loss_im_re.mean()
             loss_eular = loss_im + loss_re + loss_im_re_red
@@ -209,15 +220,17 @@ class YoloLayer(nn.Module):
             loss_conf_obj = F.binary_cross_entropy(pred_conf[obj_mask], tconf[obj_mask], reduction=self.reduction)
             loss_conf_noobj = F.binary_cross_entropy(pred_conf[noobj_mask], tconf[noobj_mask], reduction=self.reduction)
             loss_cls = F.binary_cross_entropy(pred_cls[obj_mask], tcls[obj_mask], reduction=self.reduction)
+            # print(loss_conf_obj, loss_conf_noobj, loss_cls)
+            
 
             if self.use_giou_loss:
-                loss_obj = loss_conf_obj + loss_conf_noobj
+                loss_obj = loss_conf_obj + loss_conf_noobj # confidence loss
                 total_loss = giou_loss * self.lgiou_scale + loss_eular * self.leular_scale + loss_obj * self.lobj_scale + loss_cls * self.lcls_scale
             else:
                 loss_obj = self.obj_scale * loss_conf_obj + self.noobj_scale * loss_conf_noobj
                 total_loss = loss_x + loss_y + loss_w + loss_h + loss_eular + loss_obj + loss_cls
-
-                # Metrics (store loss values using tensorboard)
+            
+            # Metrics (store loss values using tensorboard)
             cls_acc = 100 * class_mask[obj_mask].mean()
             conf_obj = pred_conf[obj_mask].mean()
             conf_noobj = pred_conf[noobj_mask].mean()
@@ -251,3 +264,23 @@ class YoloLayer(nn.Module):
             }
 
             return output, total_loss
+
+    def mseloss(self, target_label, pred, target, device):
+        # pred = pred.detach()
+        # pred = .detach()
+        car_scale = 1
+        pedestrian_scale = 6.405
+        cyclist_scale = 1
+        total_loss = 0
+        for instance in range(len(pred)):
+            if target_label[instance] == 0.0: # car
+                total_loss += (car_scale * F.mse_loss(pred[instance], target[instance], reduction=self.reduction))
+            elif target_label[instance] == 1.0: # pedestrian
+                # print('target_label: ', torch.numel(target_label))
+                # print('pred: ', torch.numel(pred))
+                # print('target: ', torch.numel(target))
+                total_loss += (pedestrian_scale * F.mse_loss(pred[instance], target[instance], reduction=self.reduction))
+            elif target_label[instance] == 2.0: # cyclist
+                total_loss += (cyclist_scale * F.mse_loss(pred[instance], target[instance], reduction=self.reduction))
+        return torch.tensor([[total_loss]]).to(device)
+

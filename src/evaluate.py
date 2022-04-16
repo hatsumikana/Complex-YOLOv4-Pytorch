@@ -5,6 +5,8 @@ import numpy as np
 import sys
 import warnings
 
+from utils.visualization_utils import show_image_with_boxes
+
 warnings.filterwarnings("ignore", category=UserWarning)
 
 import torch
@@ -30,11 +32,15 @@ def evaluate_mAP(val_loader, model, configs, logger):
     sample_metrics = []  # List of tuples (TP, confs, pred)
     # switch to evaluate mode
     model.eval()
+
+    # print model summary
+    # model.print_network()
+
     with torch.no_grad():
         start_time = time.time()
         for batch_idx, batch_data in enumerate(tqdm(val_loader)):
             data_time.update(time.time() - start_time)
-            _, imgs, targets = batch_data
+            img_paths, imgs, targets = batch_data
             # Extract labels
             labels += targets[:, 1].tolist()
             # Rescale x, y, w, h of targets ((box_idx, class, x, y, w, l, im, re))
@@ -42,10 +48,12 @@ def evaluate_mAP(val_loader, model, configs, logger):
             imgs = imgs.to(configs.device, non_blocking=True)
 
             outputs = model(imgs)
+            print('outputs: ', outputs)
             outputs = post_processing_v2(outputs, conf_thresh=configs.conf_thresh, nms_thresh=configs.nms_thresh)
 
             sample_metrics += get_batch_statistics_rotated_bbox(outputs, targets, iou_threshold=configs.iou_thresh)
-
+            print(sample_metrics)
+            
             # measure elapsed time
             # torch.cuda.synchronize()
             batch_time.update(time.time() - start_time)
@@ -60,6 +68,16 @@ def evaluate_mAP(val_loader, model, configs, logger):
         # Concatenate sample statistics
         true_positives, pred_scores, pred_labels = [np.concatenate(x, 0) for x in list(zip(*sample_metrics))]
         precision, recall, AP, f1, ap_class = ap_per_class(true_positives, pred_scores, pred_labels, labels)
+
+        # if precision < 0.5:
+        #     print(precision, recall, AP, f1, ap_class)
+        #     print(progress.get_message(batch_idx))
+            
+        #     img_rgb = cv2.imread(img_paths[0])
+        #     # img_rgb = show_image_with_boxes(img_rgb, )
+
+        #     cv2.imshow()
+        #     cv2.waitKey()
 
     return precision, recall, AP, f1, ap_class
 
@@ -119,7 +137,7 @@ if __name__ == '__main__':
     # model.print_network()
     print('\n\n' + '-*=' * 30 + '\n\n')
     assert os.path.isfile(configs.pretrained_path), "No file at {}".format(configs.pretrained_path)
-    model.load_state_dict(torch.load(configs.pretrained_path))
+    model.load_state_dict(torch.load(configs.pretrained_path, map_location='cuda:0'))
 
     configs.device = torch.device('cpu' if configs.no_cuda else 'cuda:{}'.format(configs.gpu_idx))
     model = model.to(device=configs.device)

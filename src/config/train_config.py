@@ -63,7 +63,7 @@ def parse_train_configs():
                         help='Take a subset of the dataset to run and debug')
     parser.add_argument('--num_workers', type=int, default=4,
                         help='Number of threads for loading data')
-    parser.add_argument('--batch_size', type=int, default=4,
+    parser.add_argument('--batch_size', type=int, default=1,
                         help='mini-batch size (default: 4), this is the total'
                              'batch size of all GPUs on the current node when using'
                              'Data Parallel or Distributed Data Parallel')
@@ -71,7 +71,7 @@ def parse_train_configs():
                         help='print frequency (default: 50)')
     parser.add_argument('--tensorboard_freq', type=int, default=50, metavar='N',
                         help='frequency of saving tensorboard (default: 50)')
-    parser.add_argument('--checkpoint_freq', type=int, default=5, metavar='N',
+    parser.add_argument('--checkpoint_freq', type=int, default=1, metavar='N',
                         help='frequency of saving checkpoints (default: 5)')
     ####################################################################
     ##############     Training strategy            ####################

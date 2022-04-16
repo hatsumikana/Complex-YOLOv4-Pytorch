@@ -336,21 +336,48 @@ def post_processing_v2(prediction, conf_thresh=0.95, nms_thresh=0.4):
         score = image_pred[:, 6] * image_pred[:, 7:].max(dim=1)[0]
         # Sort by it
         image_pred = image_pred[(-score).argsort()]
+        # print(type(image_pred))
         class_confs, class_preds = image_pred[:, 7:].max(dim=1, keepdim=True)
+        # print(type(class_confs), type(class_preds))
         detections = torch.cat((image_pred[:, :7].float(), class_confs.float(), class_preds.float()), dim=1)
+        
         # Perform non-maximum suppression
         keep_boxes = []
         while detections.size(0):
             # large_overlap = rotated_bbox_iou(detections[0, :6].unsqueeze(0), detections[:, :6], 1.0, False) > nms_thres # not working
+            # detections = torch.nan_to_num(detections)
+
+            # print(f'detections: {detections}')
+            # print(f'detections size: {detections.size(0)}')
+            # print(f'type: {type(detections)}')
+            
+            # # detections = torch.nan_to_num(detections)
+            # y = torch.isnan(detections).any()
+            # if y == True:
+            #     print('Have nan, skip ...')
+            #     detections = detections[~False]
+            #     continue
+
+            print(f'detections: {detections}')
+            print(f'detections size: {detections.size(0)}')
+            print(f'type: {type(detections)}')
+            print("pass 1")
             large_overlap = iou_rotated_single_vs_multi_boxes_cpu(detections[0, :6], detections[:, :6]) > nms_thresh
+            print("pass 2")
             label_match = detections[0, -1] == detections[:, -1]
+            print("pass 3")
             # Indices of boxes with lower confidence scores, large IOUs and matching labels
             invalid = large_overlap & label_match
+            print("pass 4")
             weights = detections[invalid, 6:7]
+            print("pass 5")
             # Merge overlapping bboxes by order of confidence
             detections[0, :6] = (weights * detections[invalid, :6]).sum(0) / weights.sum()
-            keep_boxes += [detections[0]]
+            print("pass 6")
+            keep_boxes += [detections[0]]  
+            print("pass 7")
             detections = detections[~invalid]
+
         if len(keep_boxes) > 0:
             output[image_i] = torch.stack(keep_boxes)
 
