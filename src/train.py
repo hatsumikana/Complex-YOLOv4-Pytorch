@@ -194,8 +194,12 @@ def train_one_epoch(train_dataloader, model, optimizer, lr_scheduler, epoch, con
     model.train()
     start_time = time.time()
     for batch_idx, batch_data in enumerate(tqdm(train_dataloader)):
+        # Print train image path
+        print(batch_data[0])
         data_time.update(time.time() - start_time)
         _, imgs, targets = batch_data
+        # print(batch_data[2])
+        
         global_step = num_iters_per_epoch * (epoch - 1) + batch_idx + 1
 
         batch_size = imgs.size(0)
@@ -211,6 +215,7 @@ def train_one_epoch(train_dataloader, model, optimizer, lr_scheduler, epoch, con
         # compute gradient and perform backpropagation
         total_loss.backward()
         if global_step % configs.subdivisions == 0:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
             optimizer.step()
             # Adjust learning rate
             if configs.step_lr_in_epoch:

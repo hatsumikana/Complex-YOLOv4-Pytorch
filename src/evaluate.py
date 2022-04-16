@@ -5,6 +5,8 @@ import numpy as np
 import sys
 import warnings
 
+from utils.visualization_utils import show_image_with_boxes
+
 warnings.filterwarnings("ignore", category=UserWarning)
 
 import torch
@@ -33,6 +35,10 @@ def evaluate_mAP(val_loader, model, configs, logger):
     sample_metrics = []  # List of tuples (TP, confs, pred)
     # switch to evaluate mode
     model.eval()
+
+    # print model summary
+    # model.print_network()
+
     with torch.no_grad():
         start_time = time.time()
         for batch_idx, batch_data in enumerate(tqdm(val_loader)):
@@ -45,6 +51,7 @@ def evaluate_mAP(val_loader, model, configs, logger):
             imgs = imgs.to(configs.device, non_blocking=True)
 
             outputs = model(imgs)
+            print('outputs: ', outputs)
             outputs = post_processing_v2(outputs, conf_thresh=configs.conf_thresh, nms_thresh=configs.nms_thresh)
 
             sample_metrics += get_batch_statistics_rotated_bbox(outputs, targets, iou_threshold=configs.iou_thresh)

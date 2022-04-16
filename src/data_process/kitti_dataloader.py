@@ -43,7 +43,6 @@ def create_train_dataloader(configs):
     train_dataloader = DataLoader(train_dataset, batch_size=configs.batch_size, shuffle=(train_sampler is None),
                                   pin_memory=configs.pin_memory, num_workers=configs.num_workers, sampler=train_sampler,
                                   collate_fn=train_dataset.collate_fn)
-
     return train_dataloader, train_sampler
 
 
