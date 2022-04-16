@@ -17,6 +17,8 @@ import kitti_util as utils
 import argparse
 import mayavi.mlab as mlab
 
+from os import listdir
+
 try:
     raw_input  # Python 2
 except NameError:
@@ -441,7 +443,7 @@ def show_lidar_with_depth(
 
 
     if objects_pred is not None:
-        color = (1, 0, 0)
+        color = (1, 1, 0)
         for obj in objects_pred:
             if obj.type == "DontCare":
                 continue
@@ -605,7 +607,7 @@ def show_lidar_with_boxes(
             figure=fig,
         )
     if objects_pred is not None:
-        color = (1, 0, 0)
+        color = (1, 1, 0)
         for obj in objects_pred:
             if obj.type == "DontCare":
                 continue
@@ -744,12 +746,16 @@ def dataset_viz(root_dir, args):
         fig = mlab.figure(
             figure=None, bgcolor=(0, 0, 0), fgcolor=None, engine=None, size=(1000, 500)
         )
-    for data_idx in range(len(dataset)):
+
+    pred_nums = [t for t in sorted(listdir(f"{root_dir}/training/pred"))]
+
+    # for data_idx in range(len(dataset)):
+    for data_idx in range(1,len(pred_nums)):
         if args.ind > 0:
             data_idx = args.ind
         # Load data from dataset
         if args.split == "training":
-            objects = dataset.get_label_objects(data_idx)
+            objects = dataset.get_label_objects(int(pred_nums[data_idx][:-4]))
         else:
             objects = []
         #objects2d = objects2ds[data_idx]
@@ -758,7 +764,7 @@ def dataset_viz(root_dir, args):
         if args.pred:
             # if not dataset.isexist_pred_objects(data_idx):
             #    continue
-            objects_pred = dataset.get_pred_objects(data_idx)
+            objects_pred = dataset.get_pred_objects(int(pred_nums[data_idx][:-4]))
             if objects_pred == None:
                 continue
         if objects_pred == None:
@@ -772,15 +778,15 @@ def dataset_viz(root_dir, args):
         dtype = np.float32
         if args.dtype64:
             dtype = np.float64
-        pc_velo = dataset.get_lidar(data_idx, dtype, n_vec)[:, 0:n_vec]
-        calib = dataset.get_calibration(data_idx)
-        img = dataset.get_image(data_idx)
+        pc_velo = dataset.get_lidar(int(pred_nums[data_idx][:-4]), dtype, n_vec)[:, 0:n_vec]
+        calib = dataset.get_calibration(int(pred_nums[data_idx][:-4]))
+        img = dataset.get_image(int(pred_nums[data_idx][:-4]))
         img_height, img_width, _ = img.shape
-        print(data_idx, "image shape: ", img.shape)
-        print(data_idx, "velo  shape: ", pc_velo.shape)
+        print(int(pred_nums[data_idx][:-4]), "image shape: ", img.shape)
+        print(int(pred_nums[data_idx][:-4]), "velo  shape: ", pc_velo.shape)
         if args.depth:
-            depth, _ = dataset.get_depth(data_idx)
-            print(data_idx, "depth shape: ", depth.shape)
+            depth, _ = dataset.get_depth(int(pred_nums[data_idx][:-4]))
+            print(int(pred_nums[data_idx][:-4]), "depth shape: ", depth.shape)
         else:
             depth = None
 
@@ -887,12 +893,12 @@ if __name__ == "__main__":
     import mayavi.mlab as mlab
     from viz_util import draw_lidar_simple, draw_lidar, draw_gt_boxes3d
 
-    parser = argparse.ArgumentParser(description="KIITI Object Visualization")
+    parser = argparse.ArgumentParser(description="KITTI Object Visualization")
     parser.add_argument(
         "-d",
         "--dir",
         type=str,
-        default="data/object",
+        default="../dataset/kitti",
         metavar="N",
         help="input  (default: data/object)",
     )
@@ -976,6 +982,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     if args.pred:
+        print(args.dir + "/" + args.split + "/pred")
         assert os.path.exists(args.dir + "/" + args.split + "/pred")
 
     if args.vis:
