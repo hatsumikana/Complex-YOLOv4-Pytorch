@@ -51,30 +51,30 @@ def evaluate_mAP(val_loader, model, configs, logger):
             imgs = imgs.to(configs.device, non_blocking=True)
 
             outputs = model(imgs)
-            print('outputs: ', outputs)
+            # print('outputs: ', outputs)
             outputs = post_processing_v2(outputs, conf_thresh=configs.conf_thresh, nms_thresh=configs.nms_thresh)
 
             sample_metrics += get_batch_statistics_rotated_bbox(outputs, targets, iou_threshold=configs.iou_thresh)
 
             # Concatenate sample statistics
-            true_positives, pred_scores, pred_labels = [np.concatenate(x, 0) for x in list(zip(*sample_metrics))]
-            precision, recall, AP, f1, ap_class = ap_per_class(true_positives, pred_scores, pred_labels, labels)
+            batch_true_positives, batch_pred_scores, batch_pred_labels = [np.concatenate(x, 0) for x in list(zip(*sample_metrics))]
+            batch_precision, _, _, _, batch_ap_class = ap_per_class(batch_true_positives, batch_pred_scores, batch_pred_labels, labels)
             
             # pedestrain = 1.0
             # cars = 0.0
             # cyclist = 2.0
             
             if 1.0 in labels:
-                index = list(ap_class).index(1)
+                index = list(batch_ap_class).index(1)
                 
-                if precision[index] < 0.8:
+                if batch_precision[index] < 0.8:
                     print(f"\n-----Detected pedestrians poorly for {img_paths[0]}-----\n")
                     img_rgb = cv2.imread(img_paths[0])
                     
                     detections = outputs
-                    img_bev = imgs
+                    img_bev = torch.Tensor.cpu(imgs)
                     
-                    img_bev = img_bev.squeeze() * 255
+                    img_bev = (img_bev.squeeze() * 255)
                     img_bev = img_bev.permute(1, 2, 0).numpy().astype(np.uint8)
                     img_bev = cv2.resize(img_bev, (configs.img_size, configs.img_size))
 
@@ -127,6 +127,10 @@ def evaluate_mAP(val_loader, model, configs, logger):
                     logger.info(progress.get_message(batch_idx))
 
             start_time = time.time()
+
+        # Concatenate sample statistics
+        true_positives, pred_scores, pred_labels = [np.concatenate(x, 0) for x in list(zip(*sample_metrics))]
+        precision, recall, AP, f1, ap_class = ap_per_class(true_positives, pred_scores, pred_labels, labels)
 
     return precision, recall, AP, f1, ap_class
 
