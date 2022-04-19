@@ -358,24 +358,24 @@ def post_processing_v2(prediction, conf_thresh=0.95, nms_thresh=0.4):
             #     detections = detections[~False]
             #     continue
 
-            print(f'detections: {detections}')
-            print(f'detections size: {detections.size(0)}')
-            print(f'type: {type(detections)}')
-            print("pass 1")
+            # print(f'detections: {detections}')
+            # print(f'detections size: {detections.size(0)}')
+            # print(f'type: {type(detections)}')
+            # print("pass 1")
             large_overlap = iou_rotated_single_vs_multi_boxes_cpu(detections[0, :6], detections[:, :6]) > nms_thresh
-            print("pass 2")
+            # print("pass 2")
             label_match = detections[0, -1] == detections[:, -1]
-            print("pass 3")
+            # print("pass 3")
             # Indices of boxes with lower confidence scores, large IOUs and matching labels
             invalid = large_overlap & label_match
-            print("pass 4")
+            # print("pass 4")
             weights = detections[invalid, 6:7]
-            print("pass 5")
+            # print("pass 5")
             # Merge overlapping bboxes by order of confidence
             detections[0, :6] = (weights * detections[invalid, :6]).sum(0) / weights.sum()
-            print("pass 6")
+            # print("pass 6")
             keep_boxes += [detections[0]]  
-            print("pass 7")
+            # print("pass 7")
             detections = detections[~invalid]
 
         if len(keep_boxes) > 0:
