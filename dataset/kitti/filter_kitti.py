@@ -61,19 +61,19 @@ logging.info("Data Retrieval Complete. Copying Files...")
 logging.debug(valid_idx)
 
 # Copy Files to output
+
+suffix_dict = {
+    "label_2" : ".txt",
+    "calib" : ".txt",
+    "image_2" : ".png",
+    "velodyne" : ".bin"
+}
+
 for sub in subfolders:
     suboutput = out_folder_path.joinpath(sub)
     subsource = src_folder_path.joinpath(sub)
     if subsource.is_dir:
-        match sub:
-            case "label_2":
-                suffix = ".txt"
-            case "calib":
-                suffix = ".txt"
-            case "image_2":
-                suffix = ".png"
-            case "velodyne":
-                suffix = ".bin"
+        suffix = suffix_dict[sub]
         logging.info("Copying Folder "+sub)
     else:
         logging.info("Folder not found: "+sub+". Continuing...")
