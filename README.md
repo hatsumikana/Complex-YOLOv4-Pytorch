@@ -240,6 +240,22 @@ tensorboard --logdir=./
 |**BoF**   |[x] Dropblock <br> [x] Random rescale, rotation (global) <br> [x] Mosaic/Cutout augmentation|[x] Cross mini-Batch Normalization <br>[x] Dropblock <br> [x] Random training shapes <br>   |
 |**BoS**   |[x] Mish activation <br> [x] Cross-stage partial connections (CSP) <br> [x] Multi-input weighted residual connections (MiWRC)   |[x] Mish activation <br> [x] SPP-block <br> [x] SAM-block <br> [x] PAN path-aggregation block <br> [x] GIoU loss <br> [ ] CIoU loss |
 
+### 2.7. KITTI Dataset Filter
+
+**KITTI Dataset Filter** function is found in `./dataset/kitti/`
+
+To use the **KITTI Dataset Filter**, ensure all required dataset files are downloaded into a single folder. Folders will be in the format of `root/'<kitti_subfolder>'` where `root` is the target source folder for training samples (usually called `./training/`).
+
+```shell script
+python filter_kitti.py --src_folder '<root source folder>' --output '<output root folder>'
+```
+
+For full debug log, apply `--log=DEBUG`
+
+```shell script
+python filter_kitti.py --src_folder '<root source folder>' --output '<output root folder>' --log=DEBUG
+```
+
 
 ## Contact
 
