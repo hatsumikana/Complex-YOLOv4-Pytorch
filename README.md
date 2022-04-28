@@ -183,15 +183,24 @@ python evaluate.py --gpu_idx 0 --pretrained_path <PATH> --cfgfile <CFG> --img_si
 ```
 (The `conf-thresh`, `nms-thresh`, and `iou-thresh` params can be adjusted. By default, these params have been set to _**0.5**_)
 
-### 2.5. Training
+### 2.5. Custom Evaluation Visualisation
 
-#### 2.5.1. Single machine, single gpu
+```shell script
+python evaluate_custom_vis.py --pretrained_path ../checkpoints/complex_yolov4/complex_yolov4_mse_loss.pth --cfgfile ./config/cfg/complex_yolov4.cfg --batch_size 1 --no_cuda
+```
+This code will print out images with precision values lesser than 0.8 for visualisation and identification. This is a tool that we based off the original evaluation code for us to programmatically select problematic inputs.
+
+Some sample images are: `000035.txt`, `000040.txt`, `000043.txt`, `000063.txt`, `000065.txt`, `000075.txt`
+
+### 2.6. Training
+
+#### 2.6.1. Single machine, single gpu
 
 ```shell script
 python train.py --gpu_idx 0 --batch_size <N> --num_workers <N>...
 ```
 
-#### 2.5.2. Multi-processing Distributed Data Parallel Training
+#### 2.6.2. Multi-processing Distributed Data Parallel Training
 We should always use the `nccl` backend for multi-processing distributed training since it currently provides the best 
 distributed training performance.
 
@@ -232,7 +241,7 @@ tensorboard --logdir=./
 - Then go to [http://localhost:6006/](http://localhost:6006/):
 
 
-### 2.6. List of usage for Bag of Freebies (BoF) & Bag of Specials (BoS) in this implementation
+### 2.7. List of usage for Bag of Freebies (BoF) & Bag of Specials (BoS) in this implementation
 
 
 |   |Backbone   | Detector   |
@@ -240,7 +249,7 @@ tensorboard --logdir=./
 |**BoF**   |[x] Dropblock <br> [x] Random rescale, rotation (global) <br> [x] Mosaic/Cutout augmentation|[x] Cross mini-Batch Normalization <br>[x] Dropblock <br> [x] Random training shapes <br>   |
 |**BoS**   |[x] Mish activation <br> [x] Cross-stage partial connections (CSP) <br> [x] Multi-input weighted residual connections (MiWRC)   |[x] Mish activation <br> [x] SPP-block <br> [x] SAM-block <br> [x] PAN path-aggregation block <br> [x] GIoU loss <br> [ ] CIoU loss |
 
-### 2.7. KITTI Dataset Filter
+### 2.8. KITTI Dataset Filter
 
 **KITTI Dataset Filter** function is found in `./dataset/kitti/`
 
