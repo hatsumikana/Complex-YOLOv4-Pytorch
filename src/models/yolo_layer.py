@@ -27,7 +27,7 @@ from utils.iou_rotated_boxes_utils import iou_pred_vs_target_boxes, iou_rotated_
 class YoloLayer(nn.Module):
     """Yolo layer"""
 
-    def __init__(self, num_classes, anchors, stride, scale_x_y, ignore_thresh):
+    def __init__(self, num_classes, anchors, stride, scale_x_y, ignore_thresh, car_scale, pedestrian_scale, cyclist_scale):
         super(YoloLayer, self).__init__()
         # Update the attributions when parsing the cfg during create the darknet
         self.num_classes = num_classes
@@ -36,6 +36,9 @@ class YoloLayer(nn.Module):
         self.stride = stride
         self.scale_x_y = scale_x_y
         self.ignore_thresh = ignore_thresh
+        self.car_scale = car_scale
+        self.pedestrian_scale = pedestrian_scale
+        self.cyclist_scale = cyclist_scale
 
         self.noobj_scale = 100
         self.obj_scale = 1
@@ -76,7 +79,7 @@ class YoloLayer(nn.Module):
         """
         nB, nA, nG, _, nC = pred_cls.size()
         n_target_boxes = target.size(0)
-        # print('targetttt: ', target)
+
         # Create output tensors on "device"
         obj_mask = torch.full(size=(nB, nA, nG, nG), fill_value=0, device=self.device, dtype=torch.uint8)
         noobj_mask = torch.full(size=(nB, nA, nG, nG), fill_value=1, device=self.device, dtype=torch.uint8)
@@ -91,7 +94,7 @@ class YoloLayer(nn.Module):
         tcls = torch.full(size=(nB, nA, nG, nG, nC), fill_value=0, device=self.device, dtype=torch.float)
         tconf = obj_mask.float()
         giou_loss = torch.tensor([0.], device=self.device, dtype=torch.float)
-        # print('labels: ', target)
+     
         if n_target_boxes > 0:  # Make sure that there is at least 1 box
             b, target_labels = target[:, :2].long().t()
             
@@ -149,6 +152,7 @@ class YoloLayer(nn.Module):
         :param img_size: default 608
         :return:
         """
+
         self.img_size = img_size
         self.use_giou_loss = use_giou_loss
         self.device = x.device
@@ -198,21 +202,20 @@ class YoloLayer(nn.Module):
                 pred_boxes=pred_boxes, pred_cls=pred_cls, target=targets, anchors=self.scaled_anchors)
 
             target_labels = targets[:, 1]
-            print(target_labels)
 
-            loss_x = self.mseloss(target_labels, pred_x[obj_mask], tx[obj_mask],device=self.device)
-            loss_y = self.mseloss(target_labels,pred_y[obj_mask], ty[obj_mask],device=self.device)
-            loss_w = self.mseloss(target_labels,pred_w[obj_mask], tw[obj_mask],device=self.device)
-            loss_h = self.mseloss(target_labels,pred_h[obj_mask], th[obj_mask],device=self.device)
-            loss_im = self.mseloss(target_labels,pred_im[obj_mask], tim[obj_mask],device=self.device)
-            loss_re = self.mseloss(target_labels,pred_re[obj_mask], tre[obj_mask],device=self.device)
-
-            # loss_x = F.mse_loss(pred_x[obj_mask], tx[obj_mask], reduction=self.reduction)
-            # loss_y = F.mse_loss(pred_y[obj_mask], ty[obj_mask], reduction=self.reduction)
-            # loss_w = F.mse_loss(pred_w[obj_mask], tw[obj_mask], reduction=self.reduction)
-            # loss_h = F.mse_loss(pred_h[obj_mask], th[obj_mask], reduction=self.reduction)
-            # loss_im = F.mse_loss(pred_im[obj_mask], tim[obj_mask], reduction=self.reduction)
-            # loss_re = F.mse_loss(pred_re[obj_mask], tre[obj_mask], reduction=self.reduction)
+            loss_x = self.mseloss(target_labels, pred_x[obj_mask], tx[obj_mask],device=self.device, 
+                                   car_scale=self.car_scale, pedestrian_scale = self.pedestrian_scale, cyclist_scale = self.cyclist_scale)
+            loss_y = self.mseloss(target_labels,pred_y[obj_mask], ty[obj_mask],device=self.device, 
+                                   car_scale=self.car_scale, pedestrian_scale = self.pedestrian_scale, cyclist_scale = self.cyclist_scale)
+            loss_w = self.mseloss(target_labels,pred_w[obj_mask], tw[obj_mask],device=self.device, 
+                                   car_scale=self.car_scale, pedestrian_scale = self.pedestrian_scale, cyclist_scale = self.cyclist_scale)
+            loss_h = self.mseloss(target_labels,pred_h[obj_mask], th[obj_mask],device=self.device, 
+                                   car_scale=self.car_scale, pedestrian_scale = self.pedestrian_scale, cyclist_scale = self.cyclist_scale)
+            loss_im = self.mseloss(target_labels,pred_im[obj_mask], tim[obj_mask],device=self.device, 
+                                   car_scale=self.car_scale, pedestrian_scale = self.pedestrian_scale, cyclist_scale = self.cyclist_scale)
+            loss_re = self.mseloss(target_labels,pred_re[obj_mask], tre[obj_mask],device=self.device, 
+                                   car_scale=self.car_scale, pedestrian_scale = self.pedestrian_scale, cyclist_scale = self.cyclist_scale)
+            
             loss_im_re = (1. - torch.sqrt(pred_im[obj_mask] ** 2 + pred_re[obj_mask] ** 2)) ** 2  # as tim^2 + tre^2 = 1
             loss_im_re_red = loss_im_re.sum() if self.reduction == 'sum' else loss_im_re.mean()
             loss_eular = loss_im + loss_re + loss_im_re_red
@@ -220,7 +223,6 @@ class YoloLayer(nn.Module):
             loss_conf_obj = F.binary_cross_entropy(pred_conf[obj_mask], tconf[obj_mask], reduction=self.reduction)
             loss_conf_noobj = F.binary_cross_entropy(pred_conf[noobj_mask], tconf[noobj_mask], reduction=self.reduction)
             loss_cls = F.binary_cross_entropy(pred_cls[obj_mask], tcls[obj_mask], reduction=self.reduction)
-            # print(loss_conf_obj, loss_conf_noobj, loss_cls)
             
 
             if self.use_giou_loss:
@@ -265,22 +267,19 @@ class YoloLayer(nn.Module):
 
             return output, total_loss
 
-    def mseloss(self, target_label, pred, target, device):
-        # pred = pred.detach()
-        # pred = .detach()
-        car_scale = 1
-        pedestrian_scale = 6.405
-        cyclist_scale = 1
-        total_loss = 0
+    def mseloss(self, target_label, pred, target, device, car_scale, pedestrian_scale, cyclist_scale):
+        loss_per_element = F.mse_loss(pred, target, reduction="none")
+
+        weight_tensor = torch.zeros(pred.size(), dtype=torch.float).to(device)
         for instance in range(len(pred)):
             if target_label[instance] == 0.0: # car
-                total_loss += (car_scale * F.mse_loss(pred[instance], target[instance], reduction=self.reduction))
+                weight_tensor[instance] = car_scale
             elif target_label[instance] == 1.0: # pedestrian
-                # print('target_label: ', torch.numel(target_label))
-                # print('pred: ', torch.numel(pred))
-                # print('target: ', torch.numel(target))
-                total_loss += (pedestrian_scale * F.mse_loss(pred[instance], target[instance], reduction=self.reduction))
+                weight_tensor[instance] = pedestrian_scale
             elif target_label[instance] == 2.0: # cyclist
-                total_loss += (cyclist_scale * F.mse_loss(pred[instance], target[instance], reduction=self.reduction))
-        return torch.tensor([[total_loss]]).to(device)
+                weight_tensor[instance] = cyclist_scale
+
+        loss_sum = torch.dot(loss_per_element, weight_tensor)
+        
+        return loss_sum/len(pred)
 

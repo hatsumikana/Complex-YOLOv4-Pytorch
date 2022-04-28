@@ -35,6 +35,9 @@ def parse_train_configs():
                         help='the path of the pretrained checkpoint')
     parser.add_argument('--use_giou_loss', action='store_true',
                         help='If true, use GIoU loss during training. If false, use MSE loss for training')
+    parser.add_argument('--car_scale', type=float, default=1.0)
+    parser.add_argument('--pedestrian_scale', type=float, default=1.0)
+    parser.add_argument('--cyclist_scale', type=float, default=1.0)
 
     ####################################################################
     ##############     Dataloader and Running configs            #######

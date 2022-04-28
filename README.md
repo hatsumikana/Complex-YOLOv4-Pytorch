@@ -367,6 +367,7 @@ usage: train.py [-h] [--seed SEED] [--saved_fn FN] [--working-dir PATH]
                 [--multiprocessing-distributed] [--evaluate]
                 [--resume_path PATH] [--conf-thresh CONF_THRESH]
                 [--nms-thresh NMS_THRESH] [--iou-thresh IOU_THRESH]
+                [--car_scale] [--pedestrian_scale] [--cyclist_scale]
 
 The Implementation of Complex YOLOv4
 
@@ -440,6 +441,12 @@ optional arguments:
                         for evaluation - the threshold for nms
   --iou-thresh IOU_THRESH
                         for evaluation - the threshold for IoU
+  --car_scale
+                        for training - focal loss scale for car
+  --pedestrian_scale
+                        for training - focal loss scale for pedestrian
+  --cyclist_scale
+                        for training - focal loss scale for cyclist
 ```
 
 [python-image]: https://img.shields.io/badge/Python-3.6-ff69b4.svg

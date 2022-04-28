@@ -144,14 +144,15 @@ class EmptyModule(nn.Module):
 
 # support route shortcut and reorg
 class Darknet(nn.Module):
-    def __init__(self, cfgfile, use_giou_loss):
+    def __init__(self, cfgfile, configs, use_giou_loss):
         super(Darknet, self).__init__()
         self.use_giou_loss = use_giou_loss
         self.blocks = parse_cfg(cfgfile)
+        self.configs = configs
         self.width = int(self.blocks[0]['width'])
         self.height = int(self.blocks[0]['height'])
 
-        self.models = self.create_network(self.blocks)  # merge conv, bn,leaky
+        self.models = self.create_network(self.blocks, self.configs)  # merge conv, bn,leaky
         self.yolo_layers = [layer for layer in self.models if layer.__class__.__name__ == 'YoloLayer']
 
         self.loss = self.models[len(self.models) - 1]
@@ -232,7 +233,7 @@ class Darknet(nn.Module):
     def print_network(self):
         print_cfg(self.blocks)
 
-    def create_network(self, blocks):
+    def create_network(self, blocks, configs):
         models = nn.ModuleList()
 
         prev_filters = 3
@@ -388,9 +389,13 @@ class Darknet(nn.Module):
                 self.num_classes = num_classes
                 scale_x_y = float(block['scale_x_y'])
                 ignore_thresh = float(block['ignore_thresh'])
+                car_scale = configs['car_scale']
+                pedestrian_scale = configs['pedestrian_scale']
+                cyclist_scale = configs['cyclist_scale']
 
                 yolo_layer = YoloLayer(num_classes=num_classes, anchors=anchors, stride=prev_stride,
-                                       scale_x_y=scale_x_y, ignore_thresh=ignore_thresh)
+                                       scale_x_y=scale_x_y, ignore_thresh=ignore_thresh, car_scale=car_scale,
+                                       pedestrian_scale=pedestrian_scale, cyclist_scale=cyclist_scale)
 
                 out_filters.append(prev_filters)
                 out_strides.append(prev_stride)
